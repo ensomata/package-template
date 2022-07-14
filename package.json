@@ -1,6 +1,6 @@
 {
   "name": "@ensomata/package-template",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Ensomata template for Typescript NPM packages published on GitHub Package Repository",
   "repository": "ensomata/package-template",
   "publishConfig": {
