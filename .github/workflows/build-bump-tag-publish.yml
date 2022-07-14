@@ -56,33 +56,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  changes:
-    name: 'Check for version bump before publishing'
-    needs: tag-and-bump
-    runs-on: ubuntu-latest
-    outputs:
-      bumped: ${{ steps.filter.outputs.bumped }}
-    steps:
-      - name: 'Check out latest commit on main'
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          ref: 'main'
-          token: '${{ secrets.GITHUB_TOKEN }}'
-
-      - name: 'Run paths-filter action'
-        uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          list-files: 'json'
-          filters: |
-            bumped:
-              - '.cz.toml'
-
   publish-docs:
     name: 'Publish generated documents on GitHub Pages'
-    needs: changes
-    if: ${{ needs.changes.outputs.bumped == 'true' }}
+    needs: tag-and-bump
     runs-on: ubuntu-latest
     env:
       HUSKY: 0
@@ -114,6 +90,29 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: 'docs: save Typedoc generated documentation (${{ env.pkg_version }})'
+
+  changes:
+    name: 'Check for version bump before publishing'
+    needs: tag-and-bump
+    runs-on: ubuntu-latest
+    outputs:
+      bumped: ${{ steps.filter.outputs.bumped }}
+    steps:
+      - name: 'Check out latest commit on main'
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: 'main'
+          token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: 'Run paths-filter action'
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: 'json'
+          filters: |
+            bumped:
+              - '.cz.toml'
 
   publish-package:
     name: 'Publish new version on GitHub Packages'
