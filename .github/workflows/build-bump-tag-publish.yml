@@ -1,0 +1,151 @@
+name: build-bump-tag-publish
+
+on:
+  push:
+    branches:
+      - 'main'
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  install-and-test:
+    name: 'Install, build, and test'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check out latest commit on main'
+        uses: actions/checkout@v2
+
+      - name: 'Set up Nodejs execution environment'
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: 'Install npm dependencies'
+        run: npm install
+
+      - name: 'Run automated tests'
+        run: npm test
+
+  tag-and-bump:
+    name: 'Bump version and create changelog'
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    needs: install-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check out latest commit on main'
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: 'main'
+          token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: 'Bump version in package.json'
+        id: cz
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          changelog_increment_filename: body.md
+
+      - name: 'Create a new GitHub release'
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: 'body.md'
+          tag_name: ${{ env.REVISION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  changes:
+    name: 'Check for version bump before publishing'
+    needs: tag-and-bump
+    runs-on: ubuntu-latest
+    outputs:
+      bumped: ${{ steps.filter.outputs.bumped }}
+    steps:
+      - name: 'Check out latest commit on main'
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: 'main'
+          token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: 'Run paths-filter action'
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: 'json'
+          filters: |
+            bumped:
+              - '.cz.toml'
+
+  publish-docs:
+    name: 'Publish generated documents on GitHub Pages'
+    needs: changes
+    if: ${{ needs.changes.outputs.bumped == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
+    steps:
+      - name: 'Check out latest commit on main'
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: 'main'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 'Save version in environment variable'
+        id: get_version
+        run: echo pkg_version=`node -p -e "require('./package.json').version"` >> $GITHUB_ENV
+
+      - name: 'Set up Nodejs execution environment'
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+          registry-url: https://npm.pkg.github.com/
+
+      - name: 'Install npm dependencies'
+        run: npm ci
+
+      - name: 'Generate documentation with Typedoc'
+        run: npm run build:docs
+
+      - name: 'Commit generated documentation'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: 'docs: save Typedoc generated documentation (${{ env.pkg_version }})'
+
+  publish-package:
+    name: 'Publish new version on GitHub Packages'
+    needs: changes
+    if: ${{ needs.changes.outputs.bumped == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: 'Check out latest commit on main'
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: 'main'
+
+      - name: 'Install npm dependencies'
+        run: npm ci
+
+      - name: 'Transpile and build code'
+        run: npm run build
+
+      - name: 'Remove development-only dependencies'
+        run: npm prune --production
+
+      - name: 'Set up Nodejs execution environment and configure to publish to GH packages'
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+          registry-url: https://npm.pkg.github.com/
+
+      - name: 'Publish package'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}

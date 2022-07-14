@@ -1,0 +1,59 @@
+{
+  "name": "@ensomata/package-template",
+  "version": "0.0.1",
+  "description": "Ensomata template for Typescript NPM packages published on GitHub Package Repository",
+  "repository": "ensomata/package-template",
+  "publishConfig": {
+    "@ensomata:registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:docs": "npm run clean:docs && scripts/generate-docs.sh",
+    "build:watch": "npm run build:es6 -w",
+    "clean": "rimraf dist/*",
+    "clean:docs": "rimraf docs/**/*",
+    "lint": "npm run lint:tsc && npm run lint:eslint",
+    "lint:eslint": "eslint src/",
+    "lint:fix": "npm run lint --fix",
+    "lint:tsc": "tsc",
+    "prebuild": "npm run clean",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepare": "npx husky install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "main": "dist/",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=10.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@commitlint/cli": "^17.0.3",
+    "@commitlint/config-conventional": "^17.0.3",
+    "@types/jest": "^28.1.4",
+    "@types/node": "^18.0.0",
+    "@types/prettier": "^2.6.3",
+    "@typescript-eslint/eslint-plugin": "^5.30.0",
+    "@typescript-eslint/parser": "^5.30.0",
+    "babel-loader": "^8.2.5",
+    "commitizen": "^4.2.4",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "husky": "^7.0.0",
+    "jest": "^28.1.2",
+    "lint-staged": "^13.0.3",
+    "prettier": "^2.7.1",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^28.0.5",
+    "ts-loader": "^9.3.1",
+    "tslib": "^2.4.0",
+    "typedoc": "^0.23.2",
+    "typescript": "^4.7.4"
+  }
+}

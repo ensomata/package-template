@@ -1,0 +1,8 @@
+!.npmignore
+.*
+.env
+.env.example
+.github/
+.husky/
+bin/
+scripts/
